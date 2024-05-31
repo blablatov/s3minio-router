@@ -1,0 +1,11 @@
+version: "3.8"
+services:
+
+  s3router:
+    image: cr.yandex/${REGISTRY_ID}/s3minio-router:latest
+    build:
+      context: .
+    container_name: s3router-app
+    command: sh -c "go test ." && sh -c "go test --bench=." && sh -c "go run s3minio-router"
+    ports:
+      - 8080:8080
