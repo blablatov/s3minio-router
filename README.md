@@ -4,7 +4,7 @@
 ### Содержание
 - [Сборка и тестирование](https://github.com/blablatov/s3minio-router#сборка-локально)
 - [Схема сервиса](https://github.com/blablatov/s3minio-router#блок-схема-сервиса)
-- [Схема сервиса](https://github.com/blablatov/s3minio-router#создание-бакета)
+- [Создание бакета](https://github.com/blablatov/s3minio-router#создание-бакета)
 
 
 ### Описание
