@@ -1,55 +1,42 @@
 // File uploader minio
-// TODO параметры подключения s3 читать из конфига
 
 package main
 
 import (
 	"context"
 	"log"
-	"sync"
 
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
 )
 
-type UpParams struct {
-	mu              sync.Mutex
-	endpoint        string
-	accessKeyID     string
-	secretAccessKey string
-	useSSL          bool
-}
-
-func (p *UpParams) Uploader(chup, chid chan string) (string, int64) {
+func uploader(chup, chid chan string) (string, int64) {
 
 	log.SetPrefix("main event: ")
 	log.SetFlags(log.Lshortfile)
 
+	pm := parseConfig()
+
 	ctx := context.Background()
 
-	endpoint := "storage.yandexcloud.net"
-	accessKeyID := "accessKeyID"
-	secretAccessKey := "secretAccessKey"
-	useSSL := false
-
 	// Initialize minio client object.
-	minioClient, err := minio.New(endpoint, &minio.Options{
-		Creds:  credentials.NewStaticV4(accessKeyID, secretAccessKey, ""),
-		Secure: useSSL,
+	minioClient, err := minio.New(pm.Endpoint, &minio.Options{
+		Creds:  credentials.NewStaticV4(pm.AccessKeyID, pm.SecretAccessKey, ""),
+		Secure: pm.UseSSL,
 	})
 	if err != nil {
-		log.Fatalln(err)
+		log.Fatalf("Error minio client: %v", err)
 	}
 
 	// Upload the test file
 	// Change the value of filePath if the file is in another location
 	bucketName := <-chid
 	objectName := <-chup
-	filePath := "./upload/" + objectName
-	contentType := "application/octet-stream"
+	filePath := `./` + pm.UploaDir + `/` + objectName
+	// contentType := "application/octet-stream"
 
 	// Upload the test file with FPutObject
-	info, err := minioClient.FPutObject(ctx, bucketName, objectName, filePath, minio.PutObjectOptions{ContentType: contentType})
+	info, err := minioClient.FPutObject(ctx, bucketName, objectName, filePath, minio.PutObjectOptions{ContentType: pm.ContentType})
 	if err != nil {
 		log.Printf("Post error: %v", err)
 		return "", 0

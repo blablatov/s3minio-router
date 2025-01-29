@@ -1,0 +1,17 @@
+{
+	"s3_storage_endpoint": "storage.yandexcloud.net",
+
+	"s3_access_key_id": "accessKeyID",
+
+    "s3_secret_access_key": "secretAccessKey",
+
+    "s3_connect_use_ssl": false,
+
+    "s3_storage_region": "eu-central-2",
+
+    "s3_content_type": "application/octet-stream",
+
+    "rout_dir_upload": "upload",
+
+	"rout_dir_download": "download"
+}

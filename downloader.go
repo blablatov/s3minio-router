@@ -1,53 +1,39 @@
 // File downloader minio
-// TODO параметры подключения s3 читать из конфига
 
 package main
 
 import (
 	"context"
 	"log"
-	"sync"
 	"time"
 
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
 )
 
-type DownParams struct {
-	mu              sync.Mutex
-	endpoint        string
-	accessKeyID     string
-	secretAccessKey string
-	useSSL          bool
-	Params          *context.Context
-}
-
-func (p *DownParams) Downloader(chs, chid chan string) string {
+func downloader(chs, chid chan string) string {
 
 	log.SetPrefix("main event: ")
 	log.SetFlags(log.Lshortfile)
 
+	pm := parseConfig()
+
 	ctx := context.Background()
 
-	endpoint := "storage.yandexcloud.net"
-	accessKeyID := "accessKeyID"
-	secretAccessKey := "secretAccessKey"
-	useSSL := false
-
 	// Initialize minio client object.
-	minioClient, err := minio.New(endpoint, &minio.Options{
-		Creds:  credentials.NewStaticV4(accessKeyID, secretAccessKey, ""),
-		Secure: useSSL,
+	minioClient, err := minio.New(pm.Endpoint, &minio.Options{
+		Creds:  credentials.NewStaticV4(pm.AccessKeyID, pm.SecretAccessKey, ""),
+		Secure: pm.UseSSL,
 	})
 	if err != nil {
-		log.Fatalln(err)
+		log.Fatalf("Error minio client: %v", err)
 	}
 
 	// Download the test file
 	// Change the value of filePath if the file is in another location
 	bucketName := <-chid
 	objectName := <-chs
-	filePath := "./download/" + objectName
+	filePath := `./` + pm.DownloaDir + `/` + objectName
 
 	start := time.Now()
 	// Download the test file with FPutObject

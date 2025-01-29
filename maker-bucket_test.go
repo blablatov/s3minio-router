@@ -4,7 +4,6 @@ package main
 
 import (
 	"context"
-	"log"
 	"testing"
 
 	"github.com/minio/minio-go/v7"
@@ -12,9 +11,6 @@ import (
 )
 
 func TestMaker(t *testing.T) {
-
-	log.SetPrefix("main event: ")
-	log.SetFlags(log.Lshortfile)
 
 	endpoint := "storage.yandexcloud.net"
 	accessKeyID := "accessKeyID"

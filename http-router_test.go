@@ -53,9 +53,6 @@ func TestRouter(t *testing.T) {
 			c.Status(400)
 		}
 
-		dp := new(DownParams)
-		m := new(MakeParams)
-
 		var wg sync.WaitGroup // Счетчик количества горутин
 
 		var mu sync.Mutex // Мьютекс каналов
@@ -75,7 +72,7 @@ func TestRouter(t *testing.T) {
 			defer wg.Done()
 
 			// Вызов метода создания бакета
-			err := m.MakerBucket(chid)
+			err := makerBucket(chid)
 			if err != nil { // TODO обработчик сообщений для фронта
 				c.Status(500) // Ошибка сервиса
 
@@ -97,7 +94,7 @@ func TestRouter(t *testing.T) {
 						chid <- uuid // Передаем в него uuid
 
 						// Вызов метода загрузчика из бакета
-						if filename = dp.Downloader(chs, chid); filename == "" {
+						if filename = downloader(chs, chid); filename == "" {
 							t.Log("Error download file")
 							c.Status(404) // Запрошенный файл не скачен с бакета
 						} else {
@@ -324,9 +321,6 @@ func TestRouter(t *testing.T) {
 		filename := c.Param("filename")
 		uuid := c.GetHeader("user-uuid")
 
-		u := new(UpParams)
-		m := new(MakeParams)
-
 		var wg sync.WaitGroup
 
 		var mu sync.Mutex
@@ -345,7 +339,7 @@ func TestRouter(t *testing.T) {
 			defer wg.Done()
 
 			// Вызов метода создания бакета
-			err := m.MakerBucket(chid)
+			err := makerBucket(chid)
 			if err != nil { // TODO обработчик сообщений для фронта
 				//c.Status(500) // Ошибка сервиса
 
@@ -361,7 +355,7 @@ func TestRouter(t *testing.T) {
 					chid <- uuid // Передаем в него uuid
 
 					// Вызов метода загрузчика в бакет
-					objname, size := u.Uploader(chup, chid)
+					objname, size := uploader(chup, chid)
 					if size == 0 {
 						c.Status(500) // Ошибка сервиса, для отладки
 					} else {

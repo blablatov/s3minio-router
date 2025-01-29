@@ -21,7 +21,9 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"io"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -31,6 +33,19 @@ import (
 
 	"github.com/gin-gonic/gin"
 )
+
+type Params struct {
+	Mu              sync.Mutex
+	Endpoint        string `json:"s3_storage_endpoint"`
+	AccessKeyID     string `json:"s3_access_key_id"`
+	SecretAccessKey string `json:"s3_secret_access_key"`
+	UseSSL          bool   `json:"s3_connect_use_ssl"`
+	Region          string `json:"s3_storage_region"`
+	ContentType     string `json:"s3_content_type"`
+	UploaDir        string `json:"rout_dir_upload"`
+	DownloaDir      string `json:"rout_dir_download"`
+	//NameBucket      string `json:"s3_storage_name_bucket"` // uuid of user
+}
 
 func main() {
 
@@ -60,9 +75,6 @@ func main() {
 			c.Status(400)
 		}
 
-		dp := new(DownParams)
-		m := new(MakeParams)
-
 		var wg sync.WaitGroup // Счетчик количества горутин
 
 		var mu sync.Mutex // Мьютекс каналов
@@ -82,7 +94,7 @@ func main() {
 			defer wg.Done()
 
 			// Вызов метода создания бакета
-			err := m.MakerBucket(chid)
+			err := makerBucket(chid)
 			if err != nil { // TODO обработчик сообщений для фронта
 				c.Status(500) // Ошибка сервиса
 
@@ -104,7 +116,7 @@ func main() {
 						chid <- uuid // Передаем в него uuid
 
 						// Вызов метода загрузчика из бакета
-						if filename = dp.Downloader(chs, chid); filename == "" {
+						if fd := downloader(chs, chid); fd == "" {
 							log.Println("Error download file")
 							c.Status(404) // Запрошенный файл не скачен с бакета
 						} else {
@@ -342,9 +354,6 @@ func main() {
 			c.Status(400)
 		}
 
-		u := new(UpParams)
-		m := new(MakeParams)
-
 		var wg sync.WaitGroup
 
 		var mu sync.Mutex
@@ -363,7 +372,7 @@ func main() {
 			defer wg.Done()
 
 			// Вызов метода создания бакета
-			err := m.MakerBucket(chid)
+			err := makerBucket(chid)
 			if err != nil { // TODO обработчик сообщений для фронта
 				//c.Status(500) // Ошибка сервиса
 
@@ -379,7 +388,7 @@ func main() {
 					chid <- uuid // Передаем в него uuid
 
 					// Вызов метода загрузчика в бакет
-					objname, size := u.Uploader(chup, chid)
+					objname, size := uploader(chup, chid)
 					if size == 0 {
 						c.Status(500) // Ошибка сервиса, для отладки
 					} else {
@@ -422,4 +431,19 @@ func main() {
 	if err := router.Run(":8080"); err != nil {
 		log.Fatalf("Server failed: %v", err)
 	}
+}
+
+// Демаршалинг json-файла конфига
+func parseConfig() *Params {
+	file, err := ioutil.ReadFile("rconfig.json")
+	if err != nil {
+		log.Fatalf("Error to reading config file: %s", err)
+	}
+
+	var pm Params
+	if err := json.Unmarshal([]byte(file), &pm); err != nil {
+		log.Fatalf("Error unmarshalling JSON: %s", err.Error())
+	}
+	// log.Printf("Params struct: %#v\n", pm)
+	return &pm
 }
