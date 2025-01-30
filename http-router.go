@@ -69,7 +69,7 @@ func main() {
 		}
 
 		// Get uuid
-		uuid := c.GetHeader("user-uuid")
+		uuid := c.GetHeader("uuid")
 		if uuid == "" {
 			log.Println("Uuid is empty!")
 			c.Status(400)
@@ -103,6 +103,8 @@ func main() {
 					defer wg.Done()
 
 					// Проверяем наличие файла локально
+					mu.Lock()
+					defer mu.Unlock()
 					file, err := os.Open("download/" + filename)
 					defer file.Close()
 					if err != nil { // Вызываем загрузчик файлов с бакета
@@ -116,7 +118,7 @@ func main() {
 						chid <- uuid // Передаем в него uuid
 
 						// Вызов метода загрузчика из бакета
-						if fd := downloader(chs, chid); fd == "" {
+						if filename = downloader(chs, chid); filename == "" {
 							log.Println("Error download file")
 							c.Status(404) // Запрошенный файл не скачен с бакета
 						} else {
@@ -299,6 +301,8 @@ func main() {
 
 			go func() {
 				defer wg.Done()
+				mu.Lock()
+				defer mu.Unlock()
 				file, err := os.Open("download/" + filename)
 				if err != nil {
 					c.String(http.StatusNotFound, "Video not found.")
@@ -348,7 +352,7 @@ func main() {
 		}
 
 		// Get uuid
-		uuid := c.GetHeader("user-uuid")
+		uuid := c.GetHeader("uuid")
 		if uuid == "" {
 			log.Println("Uuid is empty!")
 			c.Status(400)
@@ -373,7 +377,7 @@ func main() {
 
 			// Вызов метода создания бакета
 			err := makerBucket(chid)
-			if err != nil { // TODO обработчик сообщений для фронта
+			if err != nil { // TODO обработчик для nil, создание бакета
 				//c.Status(500) // Ошибка сервиса
 
 				wg.Add(1)
@@ -392,7 +396,7 @@ func main() {
 					if size == 0 {
 						c.Status(500) // Ошибка сервиса, для отладки
 					} else {
-						log.Printf("Success uploaded %sof size %d\n", objname, size)
+						log.Printf("Success uploaded %s of size %d\n", objname, size)
 					}
 					done <- struct{}{}
 

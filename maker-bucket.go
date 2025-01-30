@@ -34,12 +34,9 @@ func makerBucket(chid chan string) error {
 	err = minioClient.MakeBucket(context.Background(), newBucket, minio.MakeBucketOptions{Region: pm.Region, ObjectLocking: true})
 	if err != nil {
 		log.Printf("Error: %v", err)
-		errs := err.Error()
-		chid <- errs
+		chid <- err.Error()
 		return err
-	} else {
-		log.Println("Successfully created uuid-bucket")
-		return nil
 	}
+	log.Println("Successfully created uuid-bucket")
 	return nil
 }
