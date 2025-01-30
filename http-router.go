@@ -13,9 +13,7 @@
 // [GIN-debug] [WARNING] Running in "debug" mode. Switch to "release" mode in production. Перед деплоем включить релиз.
 // - using env:   export GIN_MODE=release
 // - using code:  gin.SetMode(gin.ReleaseMode)
-//
-// TODO init flags уровня пакета для параметров подключения
-// TODO обработчик сообщений для фронта. Status(500)
+// go build -race
 
 package main
 
@@ -82,7 +80,7 @@ func main() {
 		chid := make(chan string, 1)
 		done := make(chan struct{})
 
-		// Блокирует доступ к каналу, на время передачи данных в него
+		// Блокирует доступ к каналу, на время передачи данных
 		mu.Lock()
 		defer mu.Unlock()
 		chs <- filename
@@ -96,15 +94,13 @@ func main() {
 			// Вызов метода создания бакета
 			err := makerBucket(chid)
 			if err != nil { // TODO обработчик сообщений для фронта
-				c.Status(500) // Ошибка сервиса
+				// c.Status(500) // Ошибка сервиса
 
 				wg.Add(1)
-				go func() { // Скачиваем из существующего бакета со значением uuid
+				go func() { // Скачивает из существующего бакета со значением uuid
 					defer wg.Done()
 
 					// Проверяем наличие файла локально
-					mu.Lock()
-					defer mu.Unlock()
 					file, err := os.Open("download/" + filename)
 					defer file.Close()
 					if err != nil { // Вызываем загрузчик файлов с бакета
@@ -118,9 +114,9 @@ func main() {
 						chid <- uuid // Передаем в него uuid
 
 						// Вызов метода загрузчика из бакета
-						if filename = downloader(chs, chid); filename == "" {
+						if fd := downloader(chs, chid); fd == "" {
 							log.Println("Error download file")
-							c.Status(404) // Запрошенный файл не скачен с бакета
+							c.Status(404) // Запрошенный файл не скачен
 						} else {
 							log.Println("File downloaded from bucket")
 							c.Status(200) // Запрошенный файл скачен с бакета
@@ -128,14 +124,13 @@ func main() {
 					} else {
 						log.Println("File is locally")
 						c.Status(201) // Файл существует локально
-
-						done <- struct{}{}
-						for range <-chs {
-							//nil
-						}
-						for range <-chid {
-							//nil
-						}
+					}
+					done <- struct{}{}
+					for range <-chs {
+						//nil
+					}
+					for range <-chid {
+						//nil
 					}
 				}()
 				<-done
@@ -143,14 +138,13 @@ func main() {
 					wg.Wait()
 					close(chs) // Закрываем канал, собираем горутины
 					close(chid)
-					close(done)
 				}()
 			}
-
-			done <- struct{}{}
-			for range <-chid {
-				//nil
-			}
+		}()
+		<-done
+		go func() {
+			wg.Wait()
+			close(done)
 		}()
 
 		secs := time.Since(start).Seconds()
@@ -193,8 +187,8 @@ func main() {
 
 				c.Header("Content-Type", "video/mp4")
 
-				// Буфер байтов переменного размера, готовый к использованию
-				// Buffer is a variable-sized buffer empty buffer ready to use.
+				// Буфер байтов переменного размера
+				// Buffer is a variable-sized buffer empty
 				var buf bytes.Buffer
 				buffer := buf.Bytes()
 
@@ -377,7 +371,7 @@ func main() {
 
 			// Вызов метода создания бакета
 			err := makerBucket(chid)
-			if err != nil { // TODO обработчик для nil, создание бакета
+			if err != nil { // TODO обработчик для nil
 				//c.Status(500) // Ошибка сервиса
 
 				wg.Add(1)
@@ -394,6 +388,7 @@ func main() {
 					// Вызов метода загрузчика в бакет
 					objname, size := uploader(chup, chid)
 					if size == 0 {
+						log.Printf("Error uploaded %s of size %d\n", objname, size)
 						c.Status(500) // Ошибка сервиса, для отладки
 					} else {
 						log.Printf("Success uploaded %s of size %d\n", objname, size)
@@ -412,19 +407,12 @@ func main() {
 					wg.Wait()
 					close(chup) //Закрываем канал, собираем горутины
 					close(chid)
-					close(done)
 				}()
-			}
-
-			done <- struct{}{}
-			for range <-chid {
-				//nil
 			}
 		}()
 		<-done
 		go func() {
 			wg.Wait()
-			close(chid) //Закрываем канал, собираем горутины
 			close(done)
 		}()
 
